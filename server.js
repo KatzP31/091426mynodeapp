@@ -40,6 +40,14 @@ const MIME_TYPES = {
 http.createServer((req, res) => {
     const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     const reqPath = parsedUrl.pathname;
+
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const logLine =
+        `[${new Date().toISOString()}] IP: ${clientIp} | Method: ${req.method} | Path: ${reqPath}\n`;
+
+    fs.appendFile(path.join(__dirname, 'server.log'), logLine, (err) => {
+        if (err) console.error('Log write failed:', err);
+    });
     const newMsg = parsedUrl.searchParams.get('msg');
     if (newMsg) {
         messages.push(newMsg);
