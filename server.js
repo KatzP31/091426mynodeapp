@@ -1,6 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const mime = require('mime-types');
 
 const PORT = process.env.PORT || 3000;
 
@@ -48,10 +49,21 @@ http.createServer((req, res) => {
     fs.appendFile(path.join(__dirname, 'server.log'), logLine, (err) => {
         if (err) console.error('Log write failed:', err);
     });
+
+    const DATA_FILE = path.join(__dirname, 'messages.json');
+
+    function getSavedMessages() {
+        if (!fs.existsSync(DATA_FILE)) return ["Server booted up."];
+        return JSON.parse(fs.readFileSync(DATA_FILE));
+    }
+
     const newMsg = parsedUrl.searchParams.get('msg');
     if (newMsg) {
+        const messages = getSavedMessages();
         messages.push(newMsg);
+        fs.writeFileSync(DATA_FILE, JSON.stringify(messages, null, 2));
         res.writeHead(302, { 'Location': '/shoutbox' });
+        return res.end();
     }
     if (reqPath === '/roll') {
         console.log("/roll route accessed");
@@ -74,7 +86,7 @@ http.createServer((req, res) => {
     }
     const filePath = path.join(PUBLIC_DIR, normalizedPath);
     const ext = path.extname(filePath).toLowerCase();
-    const contentType = MIME_TYPES[ext] || 'text/plain';
+    const contentType = mime.lookup(filePath) || 'text/plain';
     fs.readFile(filePath, (err, content) => {
         if (err) {
             res.writeHead(404, { 'Content-Type': 'text/html' });
