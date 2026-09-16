@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shoutout</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body {{THEME_CLASS}}>
+    <h1>Public Shoutbox</h1>
+
+    <form action="/shoutbox" method="get" class="shout-form">
+        <input type="text" name="msg" placeholder="Type a message..." required>
+        <button type="submit">Shout!</button>
+    </form>
+
+    <div class="shoutbox">
+        <ul class="messages">
+            {{MESSAGES}}
+        </ul>
+    </div>
+    <nav>
+        <a href="/">Home</a>
+    </nav>
+</body>
+
+</html>
