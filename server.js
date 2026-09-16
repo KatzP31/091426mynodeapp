@@ -6,10 +6,9 @@ const mime = require('mime-types');
 const PORT = process.env.PORT || 3000;
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
-
 const messages = ["Server booted up successfully"];
-
 let visitorCount = 0;
+const ipRequestCounts = new Map();
 
 const adviceList = [
     "Look both ways when crossing a street.",
@@ -50,6 +49,31 @@ http.createServer((req, res) => {
         if (err) console.error('Log write failed:', err);
     });
 
+    const now = Date.now();
+    const windowMs = 10000; //10-sec window
+    const maxRequests = 10;
+
+    for (const [ip, data] of ipRequestCounts) {
+        if (now > data.resetTime) {
+            ipRequestCounts.delete(ip);
+        }
+    }
+
+    const ipData = ipRequestCounts.get(clientIp) || { count: 0, resetTime: now + windowMs };
+
+    if (now > ipData.resetTime) {
+        ipData.count = 0;
+        ipData.resetTime = now + windowMs;
+    }
+
+    ipData.count++;
+    ipRequestCounts.set(clientIp, ipData);
+
+    if (ipData.count > maxRequests) {
+        res.writeHead(429, { 'Content-Type': 'text/html', "retry-after": '10' });
+        return res.end('<h1>429 Too Many Requests<h1><p>Please wait 10 seconds.</p>')
+    }
+
     const DATA_FILE = path.join(__dirname, 'messages.json');
 
     function getSavedMessages() {
@@ -62,7 +86,7 @@ http.createServer((req, res) => {
         const messages = getSavedMessages();
         messages.push(newMsg);
         fs.writeFileSync(DATA_FILE, JSON.stringify(messages, null, 2));
-        res.writeHead(302, { 'Location': '/shoutbox' });
+        res.writeHead(302, { Location: '/shoutbox' });
         return res.end();
     }
     if (reqPath === '/roll') {
@@ -103,7 +127,7 @@ http.createServer((req, res) => {
                 console.log(`[VISIT #${visitorCount}] Connection from: ${req.socket.remoteAddress}`);
             }
             const theme = parsedUrl.searchParams.get('theme') === 'dark' ? 'dark-mode' : 'light-mode';
-            const messageListHTML = messages.map(msg => `<li>${msg}</li>`).join('');
+            const messageListHTML = getSavedMessages().map(msg => `<li>${msg}</li>`).join('');
             finalContent = content.toString()
                 .replace('{{COUNT}}', String(visitorCount))
                 .replace('{{THEME_CLASS}}', theme)
